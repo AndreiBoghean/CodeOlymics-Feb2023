@@ -1,0 +1,192 @@
+ <!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <title>let it snow</title>
+  </head>
+
+
+  <body style="overflow: hidden;">
+    <canvas id="canvas" style="border:1px solid #000000;"/>
+  </body>
+
+
+  <script>
+    // some constants you might like to change
+    // colours are in the format [r, g, b, s]
+    const background_colour = [128, 128, 128, 128]
+    const snow_colour = [0, 0, 0, 0]
+    const collideWithWalls = true
+    const collideWithFloor = true
+    const newSnowParticlesPerTick = 50
+    // additional constants can be found in functions gravity() and wind()
+
+
+    // get main canvas object
+    var canv = document.getElementById("canvas")
+
+
+    // make main canvas take up whole window
+    canv.width = window.innerWidth-20
+    canv.height = window.innerHeight-20
+
+
+
+
+    function set_pixel(r, g, b, s, x, y)
+    {
+      x = Math.round(x)
+      y = Math.round(y)
+      let pixel_number = canv.width*y+x
+      pixelData[pixel_number*4+0] = r
+      pixelData[pixel_number*4+1] = g
+      pixelData[pixel_number*4+2] = b
+      pixelData[pixel_number*4+3] = s
+    }
+
+
+    function get_pixel(x, y)
+    {
+      x = Math.round(x)
+      y = Math.round(y)
+      let pixel_number = canv.width*y+x
+      let r = old_pixelData[pixel_number*4+0]
+      let g = old_pixelData[pixel_number*4+1]
+      let b = old_pixelData[pixel_number*4+2]
+      let s = old_pixelData[pixel_number*4+3]
+      return [r, g, b, s]
+    }
+
+
+    function set_pixels(r, g, b, s, x, y, dx, dy)
+    {
+      for (let sub_y = 0 ; sub_y < dy ; sub_y++)
+      {
+        for (let sub_x = 0 ; sub_x < dx ; sub_x++)
+        {
+          set_pixel(r, g, b, s, x+sub_x, y+sub_y)
+        }
+      }
+    }
+
+
+    function set_all_pixels(r, g, b, s)
+    {
+      for (let x = 0 ; x < canv.width ; x++)
+      {
+        for (let y = 0 ; y < canv.height ; y++)
+        {
+          set_pixel(r, g, b, s, x, y)
+        }
+      }
+    }
+
+
+    class flake_class {
+      constructor(x, y)
+      {
+        let current_x = x
+        let current_y = y
+      }
+    }
+
+
+    function flakeExistsAt(x, y)
+    {
+      return JSON.stringify(get_pixel(x, y)) === JSON.stringify(snow_colour)
+    }
+
+
+    function snow_factory(snow_lim)
+    {
+      for (let snow_count = 0 ; snow_count < snow_lim ; snow_count++)
+      {
+        let flak = new flake_class(0, 100)
+        flak.current_x = Math.random()*(canv.width*1.5)-canv.width/2
+        flak.current_y = 100
+        flakes.push(flak)
+      }
+    }
+
+
+    function gravity(flake)
+    {
+      let gravity_strength = 1
+      if (flakeExistsAt(flake.current_x, flake.current_y+gravity_strength)) return;
+      if (flake.current_y+gravity_strength > canv.height-1) return;
+      flake.current_y += gravity_strength
+    }
+
+
+    function wind(flake)
+    {
+      let wind_strength = 0.6 + Math.random()*0.6-0.3; // random number centered on 0.6 +- 50%
+      if (flakeExistsAt(flake.current_x+wind_strength, flake.current_y, 1, flake)) return;
+      if (collideWithWalls && flake.current_x+wind_strength > canv.width-1) return;
+      flake.current_x += wind_strength
+    }
+
+
+    function reset_canvas()
+    {
+      set_all_pixels(...background_colour)
+    }
+
+
+    function rerender_canvas()
+    {
+      reset_canvas()
+      for (let fla of flakes)
+        set_pixels(...snow_colour, fla.current_x, fla.current_y, 1, 1)
+
+
+      // save changes to canvas
+      canvasContext.putImageData(imageData, 0, 0)
+    }
+
+
+    function tick()
+    {
+      imageData = canvasContext.getImageData(0, 0, canv.width, canv.height)
+      pixelData = imageData.data
+      old_pixelData = Array.from(pixelData)
+
+
+      console.log("triggered")
+
+
+      snow_factory(newSnowParticlesPerTick)
+
+
+      for ( let flake of flakes )
+      {
+        gravity(flake)
+        wind(flake)
+
+
+        // delete snowflakes which fall out of the viewport
+        if (collideWithFloor || collideWithWalls)
+          if (flake.current_x > canv.width || flake.current_y > canv.height)
+            flakes.splice(flakes.indexOf(flake), 1) //flakes.remove(flake);
+      }
+      rerender_canvas()
+    }
+
+
+    let flakes = []
+
+
+    let canvasContext = canv.getContext("2d", { willReadFrequently: true })
+    let imageData = canvasContext.getImageData(0, 0, canv.width, canv.height)
+    let pixelData = imageData.data
+    let old_pixelData = Array.from(pixelData)
+
+
+    set_all_pixels(...background_colour)
+    canvasContext.putImageData(imageData, 0, 0)
+
+
+    setInterval(tick, 1)
+  </script>
+</html>
+
